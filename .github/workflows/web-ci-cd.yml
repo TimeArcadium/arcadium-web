@@ -1,0 +1,95 @@
+name: CI/CD - Arcadium Web
+
+on:
+  push:
+    branches: [develop, main]
+  pull_request:
+    branches: [develop, main]
+
+permissions:
+  contents: read
+
+jobs:
+  ci:
+    name: Build & Test
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Lint
+        run: npm run lint --if-present
+
+      - name: Test (Vitest)
+        run: npm run test --if-present
+
+      - name: Build
+        env:
+          NEXT_TELEMETRY_DISABLED: "1"
+          # Adicione aqui variáveis necessárias em tempo de build
+          # NEXT_PUBLIC_API_URL: ${{ secrets.NEXT_PUBLIC_API_URL }}
+        run: npm run build
+
+      - name: Upload build artifact (PRs/Develop)
+        if: github.ref != 'refs/heads/main'
+        uses: actions/upload-artifact@v4
+        with:
+          name: web-build
+          path: ./.next
+          if-no-files-found: ignore
+
+  deploy-vercel:
+    name: Deploy (Vercel)
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_TARGET == 'vercel'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Deploy to Vercel
+        uses: amondnet/vercel-action@v25
+        with:
+          vercel-token: ${{ secrets.VERCEL_TOKEN }}          # required
+          vercel-org-id: ${{ secrets.VERCEL_ORG_ID }}        # required
+          vercel-project-id: ${{ secrets.VERCEL_PROJECT_ID }}# required
+          working-directory: .
+          prod: true
+
+  deploy-netlify:
+    name: Deploy (Netlify)
+    needs: ci
+    runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/main' && vars.DEPLOY_TARGET == 'netlify'
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+          cache: npm
+
+      - name: Install
+        run: npm ci
+
+      - name: Netlify Deploy (build local)
+        uses: netlify/actions/cli@v2.0.1
+        with:
+          args: deploy --build --prod
+        env:
+          NETLIFY_AUTH_TOKEN: ${{ secrets.NETLIFY_AUTH_TOKEN }}   # required
+          NETLIFY_SITE_ID: ${{ secrets.NETLIFY_SITE_ID }}         # required
