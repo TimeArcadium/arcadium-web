@@ -1,14 +1,31 @@
-import React from "react";
+import type { Metadata } from "next";
+import { Lexend } from "next/font/google";
+import "./globals.css";
 
-export const metadata = {
+export const geistSans = Lexend({
+  subsets: ["latin"],
+  variable: "--font-geist-sans",
+  weight: ["400", "500", "600", "700"],
+  display: "swap",
+});
+
+export const metadata: Metadata = {
   title: "Arcadium",
-  description: "Plataforma para reviews e rankings de jogos"
+  description: "Frontend do Arcadium: plataforma para avaliação e descoberta de jogos, com rankings, reviews e perfis personalizados.",
 };
 
-export default function RootLayout({ children }: { children: React.ReactNode }) {
+export default function RootLayout({
+  children,
+}: Readonly<{
+  children: React.ReactNode;
+}>) {
   return (
-    <html lang="pt-BR">
-      <body>{children}</body>
+    <html lang="pt-br">
+      <body
+        className={`${geistSans.className} antialiased bg-gray-300`}
+      >
+        {children}
+      </body>
     </html>
   );
 }
